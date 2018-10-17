@@ -15,8 +15,6 @@ export default class TimerContainer extends Component {
 
     constructor(props){
         super(props);
-        console.log(milliseconds2(0, 0));
-        console.log(milliseconds2(1, 0));
     }
 
     /**
@@ -117,6 +115,7 @@ export default class TimerContainer extends Component {
 
     /**
      * Count down the 'test' Component state variable by 1000 milliseconds every second till zero.
+     * reference: https://www.w3schools.com/howto/howto_js_countdown.asp
      */
     countDown = () => {
         this.intervalID = setInterval(() => {
