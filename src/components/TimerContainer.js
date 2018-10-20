@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 export default class TimerContainer extends Component {
     intervalID = 0; // Global variable used to store Countdown setInterval ID
     breakIntervalID = 0; // Global variable used to store break countdown setInterval ID
-    state = {
+    state = { // initialised outside constructor to avoid state undefined errors
         initial: new Date(),
         output: '', // current time in '#m #s' format
         min: 0, // current minutes
@@ -16,11 +16,11 @@ export default class TimerContainer extends Component {
         test: 0, // current time in milliseconds
         timeAmountAsMilliseconds: function(){
             return milliseconds(this.timeAmount, 0);
-        },
+        }, // function to convert time amount from minutes to milliseconds
         breakAmountAsMilliseconds: function () {
             return milliseconds(this.breakAmount, 0);
-        }
-    }; // initialised outside constructor to avoid state undefined errors
+        } // function to convert break amount from minutes to milliseconds
+    };
 
     constructor(props){
         super(props);
@@ -41,7 +41,6 @@ export default class TimerContainer extends Component {
             output: mins + "m " + secs + "s ",
             test: mm
         });
-        console.log(this.state.timeAmountAsMilliseconds() + ' : ' + this.state.breakAmountAsMilliseconds());
     }
 
     /**
@@ -61,7 +60,7 @@ export default class TimerContainer extends Component {
      * and start the countdown with current state.
      */
     handleStart = () => {
-        const target = milliseconds(this.state.timeAmount, 0);
+        const target = this.state.timeAmountAsMilliseconds();
         const current = this.state.test;
         if (current === 0){
             this.setState({
@@ -105,7 +104,7 @@ export default class TimerContainer extends Component {
      * - output
      */
     handleReset = () => {
-        const target = milliseconds(this.state.timeAmount, 0);
+        const target = this.state.timeAmountAsMilliseconds();
         const current = this.state.test;
         if (current !== target && this.intervalID !== 0){
             clearInterval(this.intervalID);
@@ -180,7 +179,7 @@ export default class TimerContainer extends Component {
     };
 
     breakCountdown = () => {
-        let time = milliseconds(this.state.breakAmount, 0);
+        let time = this.state.breakAmountAsMilliseconds();
         this.breakIntervalID = setInterval(() => {
             time-=1000;
             if (time < 1000){
