@@ -2,15 +2,24 @@ import React, { Component } from 'react';
 
 
 export default class TimerContainer extends Component {
-    intervalID = 0; // Global variable used to store setInterval ID
+    intervalID = 0; // Global variable used to store Countdown setInterval ID
+    breakIntervalID = 0; // Global variable used to store break countdown setInterval ID
     state = {
         initial: new Date(),
-        output: '',
-        min: 0,
-        sec: 0,
-        isPaused: false,
-        timeAmount: 1,
-        message: ''
+        output: '', // current time in '#m #s' format
+        min: 0, // current minutes
+        sec: 0, // current seconds
+        isPaused: false, // flag for paused or not paused
+        timeAmount: 1, // amount to count down in minutes
+        message: '', // message to display to user e.g. 'Paused', 'Working' etc
+        breakAmount: 1, // number of minutes for each break
+        test: 0, // current time in milliseconds
+        timeAmountAsMilliseconds: function(){
+            return milliseconds(this.timeAmount, 0);
+        },
+        breakAmountAsMilliseconds: function () {
+            return milliseconds(this.breakAmount, 0);
+        }
     }; // initialised outside constructor to avoid state undefined errors
 
     constructor(props){
@@ -31,15 +40,18 @@ export default class TimerContainer extends Component {
         this.setState({
             output: mins + "m " + secs + "s ",
             test: mm
-        })
+        });
+        console.log(this.state.timeAmountAsMilliseconds() + ' : ' + this.state.breakAmountAsMilliseconds());
     }
 
     /**
      * Toggles the 'isPaused' boolean declared within the Component state
      */
     togglePause = () => {
+        const message = this.state.isPaused ? 'Working' : 'Paused';
         this.setState({
-            isPaused: !this.state.isPaused
+            isPaused: !this.state.isPaused,
+            message: message
         })
     };
 
@@ -54,18 +66,14 @@ export default class TimerContainer extends Component {
         if (current === 0){
             this.setState({
                 test: target,
-                isPaused: false
-            });
-            this.countDown();
+                message: ''
+            }, () => {
+                this.countDown();
+            }); // Callback function in setState is required to prevent countDown being called before the state
+            // is set.
         } else if (current === target){
             this.countDown();
         }
-    };
-
-    setTimer = () => {
-        this.setState({
-            test: milliseconds(this.state.timeAmount, 0)
-        })
     };
 
     /**
@@ -77,8 +85,8 @@ export default class TimerContainer extends Component {
         const input = e.target.value;
         if (input === null || input < 1 || isNaN(input)){
             this.setState({
-                timeAmount: 0,
-                test: milliseconds(input, 0)
+                timeAmount: 1,
+                test: milliseconds(1, 0)
             })
         } else {
             this.setState({
@@ -106,7 +114,8 @@ export default class TimerContainer extends Component {
             this.setState({
                 test: target,
                 isPaused: false,
-                output: tmins + "m " + tsecs + "s "
+                output: tmins + "m " + tsecs + "s ",
+                message: ''
             })
         }
     };
@@ -118,12 +127,23 @@ export default class TimerContainer extends Component {
      * reference: https://www.w3schools.com/howto/howto_js_countdown.asp
      */
     countDown = () => {
+        this.setState({
+            message: 'Working'
+        });
+        let n = this.state.test;
         this.intervalID = setInterval(() => {
             if (!this.state.isPaused){
-                const n = this.state.test - 1000;
+                n-=1000;
                 const tmins = Math.floor((n % (1000 * 60 * 60)) / (1000 * 60));
                 const tsecs = Math.floor((n % (1000 * 60)) / 1000);
-                if (n < 1000){
+                if (this.shouldBreak2(n)){
+                    clearInterval(this.intervalID);
+                    this.setState({
+                        message: 'On Break!'
+                    });
+                    this.breakCountdown();
+                }
+                if (n === 0){
                     this.setState({
                         message: 'Time ran out!',
                         test: 0
@@ -136,6 +156,38 @@ export default class TimerContainer extends Component {
                 })
             }
         }, 1000);
+    };
+
+    shouldBreak = (n) => {
+        const difference = this.state.timeAmount - minutes(n);
+        if (n === 0 || n === milliseconds(this.state.timeAmount, 0)){
+            return false; // Don't break when zero or target time
+        }
+
+        if (n % 60000 === 0){
+            return difference % this.state.breakAmount === 0;
+        } else {
+            return false;
+        }
+    };
+
+    shouldBreak2 = (n) => {
+        const difference = milliseconds(this.state.timeAmount, 0) - n;
+        if (n === 0 || n === milliseconds(this.state.timeAmount, 0)){
+            return false; // Don't break when zero or target time
+        }
+        return difference % milliseconds(this.state.breakAmount, 0) === 0;
+    };
+
+    breakCountdown = () => {
+        let time = milliseconds(this.state.breakAmount, 0);
+        this.breakIntervalID = setInterval(() => {
+            time-=1000;
+            if (time < 1000){
+                clearInterval(this.breakIntervalID); // end break
+                this.countDown(); // continue countdown
+            }
+        }, 1000)
     };
 
 
@@ -177,4 +229,5 @@ export default class TimerContainer extends Component {
 }
 
 const milliseconds = (m, s) => ((60+m*60+s)*1000-60000); //https://stackoverflow.com/a/51468455
-const milliseconds2 = (m, s) => ((60+m*60+s)*1000-60000);
+const minutes = (milliseconds) => (milliseconds/1000/60);
+// const milliseconds2 = (m, s) => ((60+m*60+s)*1000-60000);
