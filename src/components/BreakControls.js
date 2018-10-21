@@ -14,3 +14,5 @@ const BreakControls = (props) => {
         </div>
     )
 };
+
+export default BreakControls;
