@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-
+import TimerControls from './TimerControls';
 
 export default class TimerContainer extends Component {
     intervalID = 0; // Global variable used to store Countdown setInterval ID
@@ -12,25 +12,32 @@ export default class TimerContainer extends Component {
         isPaused: false, // flag for paused or not paused
         timeAmount: 1, // amount to count down in minutes
         message: '', // message to display to user e.g. 'Paused', 'Working' etc
-        breakAmount: 1, // number of minutes for each break
-        test: 0, // current time in milliseconds
+        breakAmount: 0, // number of minutes for each break, default value is zero so functionality is disabled
+        current: 0, // current time in milliseconds
         timeAmountAsMilliseconds: function(){
             return milliseconds(this.timeAmount, 0);
         }, // function to convert time amount from minutes to milliseconds
         breakAmountAsMilliseconds: function () {
             return milliseconds(this.breakAmount, 0);
-        } // function to convert break amount from minutes to milliseconds
+        }, // function to convert break amount from minutes to milliseconds
+        timeAmountOutput: function () {
+            const target = this.timeAmountAsMilliseconds();
+            const tmins = Math.floor((target % (1000 * 60 * 60)) / (1000 * 60));
+            const tsecs = Math.floor((target % (1000 * 60)) / 1000);
+            return tmins + "m " + tsecs + "s ";
+        }
     };
 
     constructor(props){
         super(props);
+        console.log(milliseconds(0.5,0));
     }
 
     /**
      * Used to workout the target time in milliseconds from minutes, then set the state of the following
      * variables using the time in milliseconds.
      * - output
-     * - test
+     * - current
      * Will only be called once after first mount
      */
     componentDidMount(){
@@ -39,7 +46,7 @@ export default class TimerContainer extends Component {
         const secs = Math.floor((mm % (1000 * 60)) / 1000);
         this.setState({
             output: mins + "m " + secs + "s ",
-            test: mm
+            current: mm
         });
     }
 
@@ -47,11 +54,13 @@ export default class TimerContainer extends Component {
      * Toggles the 'isPaused' boolean declared within the Component state
      */
     togglePause = () => {
-        const message = this.state.isPaused ? 'Working' : 'Paused';
-        this.setState({
-            isPaused: !this.state.isPaused,
-            message: message
-        })
+        if (this.intervalID !== 0){
+            const message = this.state.isPaused ? 'Working' : 'Paused';
+            this.setState({
+                isPaused: !this.state.isPaused,
+                message: message
+            })
+        }
     };
 
     /**
@@ -61,11 +70,12 @@ export default class TimerContainer extends Component {
      */
     handleStart = () => {
         const target = this.state.timeAmountAsMilliseconds();
-        const current = this.state.test;
+        const current = this.state.current;
         if (current === 0){
             this.setState({
-                test: target,
-                message: ''
+                current: target,
+                message: '',
+                output: this.state.timeAmountOutput()
             }, () => {
                 this.countDown();
             }); // Callback function in setState is required to prevent countDown being called before the state
@@ -76,21 +86,41 @@ export default class TimerContainer extends Component {
     };
 
     /**
-     * Handler for time input from user, performs input validation to prevent runtime errors will run with default
-     * state, otherwise sets 'timeAmount' and 'test' variables to user input. ('input' should be in minutes)
-     * @param e - event for onChange
+     * Handler for time input from user, performs input validation to prevent runtime errors will set amount to one
+     * if incorrect input, otherwise sets 'timeAmount' and 'current' variables to user input.
+     * ('input' should be in minutes)
+     * @param e - onChange event
      */
     handleInputChange = e => {
         const input = e.target.value;
         if (input === null || input < 1 || isNaN(input)){
             this.setState({
                 timeAmount: 1,
-                test: milliseconds(1, 0)
+                current: milliseconds(1, 0)
             })
         } else {
             this.setState({
                 timeAmount: input,
-                test: milliseconds(input, 0)
+                current: milliseconds(input, 0)
+            })
+        }
+    };
+
+    /**
+     * Handler for break time input from user, performs input validation to prevent runtime errors will set amount to
+     * zero if incorrect input, otherwise sets 'timeAmount' and 'current' variables to user input.
+     * ('input' should be in minutes)
+     * @param e - onChange event
+     */
+    handleBreakInputChange = e => {
+      const input = e.target.value;
+        if (input === null || input > 60 || isNaN(input)){
+            this.setState({
+                breakAmount: 0
+            })
+        } else {
+            this.setState({
+                breakAmount: input
             })
         }
     };
@@ -99,19 +129,22 @@ export default class TimerContainer extends Component {
      * Handler for 'reset' button, if the 'intervalID' variable is not equal to zero and the current time in
      * milliseconds is not equal to the target time in milliseconds the method assumes countdown is currently active
      * and will clearInterval of the currently active interval and reset the following Component state variables
-     * - test
+     * - current
      * - isPaused
      * - output
      */
     handleReset = () => {
         const target = this.state.timeAmountAsMilliseconds();
-        const current = this.state.test;
+        const current = this.state.current;
         if (current !== target && this.intervalID !== 0){
             clearInterval(this.intervalID);
+            if (this.breakIntervalID === 0){
+                clearInterval(this.breakIntervalID);
+            }
             const tmins = Math.floor((target % (1000 * 60 * 60)) / (1000 * 60));
             const tsecs = Math.floor((target % (1000 * 60)) / 1000);
             this.setState({
-                test: target,
+                current: target,
                 isPaused: false,
                 output: tmins + "m " + tsecs + "s ",
                 message: ''
@@ -119,23 +152,21 @@ export default class TimerContainer extends Component {
         }
     };
 
-
-
     /**
-     * Count down the 'test' Component state variable by 1000 milliseconds every second till zero.
+     * Count down the 'current' Component state variable by 1000 milliseconds every second till zero.
      * reference: https://www.w3schools.com/howto/howto_js_countdown.asp
      */
     countDown = () => {
         this.setState({
             message: 'Working'
         });
-        let n = this.state.test;
+        let n = this.state.current;
         this.intervalID = setInterval(() => {
             if (!this.state.isPaused){
                 n-=1000;
                 const tmins = Math.floor((n % (1000 * 60 * 60)) / (1000 * 60));
                 const tsecs = Math.floor((n % (1000 * 60)) / 1000);
-                if (this.shouldBreak2(n)){
+                if (this.shouldBreak(n)){
                     clearInterval(this.intervalID);
                     this.setState({
                         message: 'On Break!'
@@ -145,12 +176,12 @@ export default class TimerContainer extends Component {
                 if (n === 0){
                     this.setState({
                         message: 'Time ran out!',
-                        test: 0
+                        current: 0
                     });
                     clearInterval(this.intervalID);
                 }
                 this.setState({
-                    test: n,
+                    current: n,
                     output: tmins + "m " + tsecs + "s "
                 })
             }
@@ -158,21 +189,8 @@ export default class TimerContainer extends Component {
     };
 
     shouldBreak = (n) => {
-        const difference = this.state.timeAmount - minutes(n);
-        if (n === 0 || n === milliseconds(this.state.timeAmount, 0)){
-            return false; // Don't break when zero or target time
-        }
-
-        if (n % 60000 === 0){
-            return difference % this.state.breakAmount === 0;
-        } else {
-            return false;
-        }
-    };
-
-    shouldBreak2 = (n) => {
         const difference = milliseconds(this.state.timeAmount, 0) - n;
-        if (n === 0 || n === milliseconds(this.state.timeAmount, 0)){
+        if (n === 0 || n === milliseconds(this.state.timeAmount, 0 || this.state.breakAmount === 0)){
             return false; // Don't break when zero or target time
         }
         return difference % milliseconds(this.state.breakAmount, 0) === 0;
@@ -191,35 +209,22 @@ export default class TimerContainer extends Component {
 
 
     render(){
-        let buttonText;
-        if (this.state.isPaused){
-            buttonText = 'Continue';
-        } else {
-            buttonText = 'Pause';
-        }
         return (
             <div className="timer-container">
                 <p>{this.state.output}</p>
-                <button
-                    onClick={this.handleStart}
-                >
-                    Start
-                </button>
-                <button
-                    onClick={this.togglePause}
-                >
-                    {buttonText}
-                </button>
-                <button
-                    onClick={this.handleReset}
-                >
-                    Reset
-                </button>
-                <input
-                    placeholder='Amount in minutes'
-                    value={this.state.timeAmount}
-                    onChange={this.handleInputChange}
-                />
+                <TimerControls
+                    isPaused={this.state.isPaused}
+                    timeAmount={this.state.timeAmount}
+                    handleInputChange={this.handleInputChange}
+                    handleStart={this.handleStart}
+                    handleReset={this.handleReset}
+                    togglePause={this.togglePause} >
+                    {/* Input to set break amount if breaking functionality is to be used */}
+                    <input
+                        value={this.state.breakAmount}
+                        onChange={this.handleBreakInputChange}
+                    />
+                </TimerControls>
                 <p>{this.state.message}</p>
             </div>
         )

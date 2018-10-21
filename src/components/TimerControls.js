@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
 /**
- * Companion Component/function of TimerContainer, though can be used separately.
- * Provides basic controls to set time, start timer, pause/continue timer, and reset timer
+ * Stateless companion Component/function of TimerContainer, though can be used separately.
+ * Provides basic controls to set time, start timer, pause/continue timer, and reset timer from parent
  * @param props - inherited properties (see propTypes object)
- * @returns {*}
+ * @returns {*} - UI input controls for the timer
  * @constructor
  */
 const TimerControls = (props) => {
