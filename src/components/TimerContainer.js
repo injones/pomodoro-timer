@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import TimerControls from './TimerControls';
+import { subscribeToTimer } from './api';
+import TimesList from './TimesList';
 
 export default class TimerContainer extends Component {
     intervalID = 0; // Global variable used to store Countdown setInterval ID
@@ -14,6 +16,7 @@ export default class TimerContainer extends Component {
         message: '', // message to display to user e.g. 'Paused', 'Working' etc
         breakAmount: 0, // number of minutes for each break, default value is zero so functionality is disabled
         current: 0, // current time in milliseconds
+        times: [],
         timeAmountAsMilliseconds: function(){
             return milliseconds(this.timeAmount, 0);
         }, // function to convert time amount from minutes to milliseconds
@@ -31,6 +34,13 @@ export default class TimerContainer extends Component {
     constructor(props){
         super(props);
         console.log(milliseconds(0.5,0));
+        subscribeToTimer({username: 'user', time: this.state.timeAmount}, (err, times) => {
+            this.setState({
+                times
+            }, () => {
+                console.log(this.state.times);
+            })
+        });
     }
 
     /**
@@ -161,6 +171,11 @@ export default class TimerContainer extends Component {
             message: 'Working'
         });
         let n = this.state.current;
+        subscribeToTimer({username: 'user', time: minutes(n)}, (err, times) => {
+            this.setState({
+                times
+            });
+        });
         this.intervalID = setInterval(() => {
             if (!this.state.isPaused){
                 n-=1000;
@@ -172,6 +187,15 @@ export default class TimerContainer extends Component {
                         message: 'On Break!'
                     });
                     this.breakCountdown();
+                }
+                if (this.shouldBroadcast(n)){
+                    subscribeToTimer({username: 'user', time: minutes(n)}, (err, times) => {
+                        this.setState({
+                            times
+                        }, () => {
+                            console.log(this.state.times);
+                        })
+                    })
                 }
                 if (n === 0){
                     this.setState({
@@ -194,6 +218,11 @@ export default class TimerContainer extends Component {
             return false; // Don't break when zero or target time
         }
         return difference % milliseconds(this.state.breakAmount, 0) === 0;
+    };
+
+    shouldBroadcast = (n) => {
+        // broadcast current time amount to the server every minute
+        return n % 60000 === 0;
     };
 
     breakCountdown = () => {
@@ -226,6 +255,10 @@ export default class TimerContainer extends Component {
                     />
                 </TimerControls>
                 <p>{this.state.message}</p>
+                {/* could move this up */}
+                <div>
+                    <TimesList times={this.state.times}/>
+                </div>
             </div>
         )
     }

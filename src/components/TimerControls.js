@@ -9,7 +9,7 @@ import PropTypes from 'prop-types';
  * @constructor
  */
 const TimerControls = (props) => {
-    let buttonText;
+    let buttonText; //TODO Replace with inline ternary conditional
     if (props.isPaused){
         buttonText = 'Continue';
     } else {
